@@ -27,6 +27,9 @@ export function SudokuGame() {
   const [showErrors, setShowErrors] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [totalMistakes, setTotalMistakes] = useState(0);
+  const [countedMistakeCells, setCountedMistakeCells] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [message, setMessage] = useState("選一格空白格，開始填入 1 到 9。");
   const [messageTone, setMessageTone] = useState<MessageTone>("info");
 
@@ -62,6 +65,7 @@ export function SudokuGame() {
       setShowErrors(false);
       setElapsedSeconds(0);
       setTotalMistakes(0);
+      setCountedMistakeCells(new Set());
       setMessage(`${nextPuzzle.title} 已開始，選一格空白格來填數字。`);
       setMessageTone("info");
     },
@@ -112,6 +116,56 @@ export function SudokuGame() {
 
       setGrid(nextGrid);
 
+      const cellKey = `${selected.row}-${selected.col}`;
+
+      if (value === null) {
+        setCountedMistakeCells((previousCells) => {
+          if (!previousCells.has(cellKey)) {
+            return previousCells;
+          }
+
+          const nextCells = new Set(previousCells);
+          nextCells.delete(cellKey);
+          return nextCells;
+        });
+        setMessage("已清除選取格。");
+        setMessageTone("info");
+        return;
+      }
+
+      const isMistake = value !== puzzle.solution[selected.row][selected.col];
+
+      if (isMistake) {
+        setShowErrors(true);
+
+        if (!countedMistakeCells.has(cellKey)) {
+          setTotalMistakes((previousMistakes) => previousMistakes + 1);
+          setCountedMistakeCells((previousCells) => {
+            const nextCells = new Set(previousCells);
+            nextCells.add(cellKey);
+            return nextCells;
+          });
+        }
+
+        setMessage(
+          countedMistakeCells.has(cellKey)
+            ? "這格仍和答案不一致。"
+            : `${value} 不是這格的答案，錯誤次數 +1。`,
+        );
+        setMessageTone("error");
+        return;
+      }
+
+      setCountedMistakeCells((previousCells) => {
+        if (!previousCells.has(cellKey)) {
+          return previousCells;
+        }
+
+        const nextCells = new Set(previousCells);
+        nextCells.delete(cellKey);
+        return nextCells;
+      });
+
       if (isComplete(nextGrid, puzzle.solution)) {
         setShowErrors(true);
         setMessage(
@@ -122,10 +176,11 @@ export function SudokuGame() {
       }
 
       setShowErrors(false);
-      setMessage(value === null ? "已清除選取格。" : `已填入 ${value}。`);
+      setMessage(`已填入 ${value}。`);
       setMessageTone("info");
     },
     [
+      countedMistakeCells,
       completed,
       elapsedSeconds,
       grid,
@@ -142,11 +197,6 @@ export function SudokuGame() {
     const currentErrorCount = countErrors(grid, puzzle.solution);
     const hasErrors = currentErrorCount > 0;
 
-    console.log("hasErrors", hasErrors);
-    console.log("totalMistakes before", totalMistakes);
-    console.log(`hasErrors ${hasErrors}`);
-    console.log(`totalMistakes before ${totalMistakes}`);
-
     if (completed) {
       setMessage(
         `完成時間：${formatElapsedTime(elapsedSeconds)}。錯誤：${totalMistakes} 次。`,
@@ -156,9 +206,6 @@ export function SudokuGame() {
     }
 
     if (hasErrors) {
-      console.log("increment mistakes");
-
-      setTotalMistakes((previousMistakes) => previousMistakes + 1);
       setMessage(
         `目前有 ${currentErrorCount} 格和答案不一致。紅色格請再確認。`,
       );
@@ -317,14 +364,12 @@ export function SudokuGame() {
                   const related = isRelatedCell(selected, rowIndex, colIndex);
                   const sameValue =
                     selectedValue !== null && value === selectedValue;
-                  const incorrect =
-                    showErrors &&
-                    hasIncorrectValue(
-                      value,
-                      puzzle.solution,
-                      rowIndex,
-                      colIndex,
-                    );
+                  const incorrect = hasIncorrectValue(
+                    value,
+                    puzzle.solution,
+                    rowIndex,
+                    colIndex,
+                  );
 
                   return (
                     <button
@@ -344,9 +389,11 @@ export function SudokuGame() {
                         rowIndex === 2 || rowIndex === 5
                           ? "border-b-2"
                           : "",
-                        isSelected
-                          ? "bg-[#f2c94c] text-[#18212a] ring-2 ring-inset ring-[#9f6b16]"
-                          : incorrect
+                        isSelected && incorrect
+                          ? "bg-[#ffe4df] text-[#b42318] ring-2 ring-inset ring-[#c2410c]"
+                          : isSelected
+                            ? "bg-[#f2c94c] text-[#18212a] ring-2 ring-inset ring-[#9f6b16]"
+                            : incorrect
                             ? "bg-[#ffe4df] text-[#b42318]"
                             : sameValue
                               ? "bg-[#e8f0ff] text-[#2541b2]"
