@@ -19,6 +19,16 @@ const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 type MessageTone = "info" | "error" | "success";
 
+function getMistakeKeys(grid: SudokuGrid, solution: number[][]) {
+  return grid.flatMap((row, rowIndex) =>
+    row.flatMap((value, colIndex) =>
+      hasIncorrectValue(value, solution, rowIndex, colIndex)
+        ? [`${rowIndex}-${colIndex}-${value}`]
+        : [],
+    ),
+  );
+}
+
 export function SudokuGame() {
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [puzzle, setPuzzle] = useState<Puzzle>(() => puzzles.easy[0]);
@@ -26,6 +36,10 @@ export function SudokuGame() {
   const [selected, setSelected] = useState<CellPosition | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [totalMistakes, setTotalMistakes] = useState(0);
+  const [lastCountedMistakeKeys, setLastCountedMistakeKeys] = useState<
+    Set<string>
+  >(() => new Set());
   const [message, setMessage] = useState("選一格空白格，開始填入 1 到 9。");
   const [messageTone, setMessageTone] = useState<MessageTone>("info");
 
@@ -60,6 +74,8 @@ export function SudokuGame() {
       setSelected(null);
       setShowErrors(false);
       setElapsedSeconds(0);
+      setTotalMistakes(0);
+      setLastCountedMistakeKeys(new Set());
       setMessage(`${nextPuzzle.title} 已開始，選一格空白格來填數字。`);
       setMessageTone("info");
     },
@@ -112,7 +128,11 @@ export function SudokuGame() {
 
       if (isComplete(nextGrid, puzzle.solution)) {
         setShowErrors(true);
-        setMessage(`完成！用時 ${formatElapsedTime(elapsedSeconds)}。`);
+        setMessage(
+          `Completed in ${formatElapsedTime(
+            elapsedSeconds,
+          )}. Mistakes: ${totalMistakes}.`,
+        );
         setMessageTone("success");
         return;
       }
@@ -128,6 +148,7 @@ export function SudokuGame() {
       puzzle.solution,
       selected,
       selectedIsFixed,
+      totalMistakes,
     ],
   );
 
@@ -135,20 +156,48 @@ export function SudokuGame() {
     setShowErrors(true);
 
     if (completed) {
-      setMessage(`完成！用時 ${formatElapsedTime(elapsedSeconds)}。`);
+      setMessage(
+        `Completed in ${formatElapsedTime(
+          elapsedSeconds,
+        )}. Mistakes: ${totalMistakes}.`,
+      );
       setMessageTone("success");
       return;
     }
 
     if (errorCount > 0) {
-      setMessage(`目前有 ${errorCount} 格和答案不一致，紅色格請再確認。`);
+      const currentMistakeKeys = getMistakeKeys(grid, puzzle.solution);
+      const newMistakeCount = currentMistakeKeys.filter(
+        (key) => !lastCountedMistakeKeys.has(key),
+      ).length;
+      const nextTotalMistakes = totalMistakes + newMistakeCount;
+
+      setLastCountedMistakeKeys(new Set(currentMistakeKeys));
+      if (newMistakeCount > 0) {
+        setTotalMistakes(nextTotalMistakes);
+      }
+      setMessage(
+        newMistakeCount > 0
+          ? `本次新增 ${newMistakeCount} 個錯誤；目前總錯誤次數 ${nextTotalMistakes}。紅色格請再確認。`
+          : `目前仍有 ${errorCount} 格和答案不一致，這些錯誤已計入總數。`,
+      );
       setMessageTone("error");
       return;
     }
 
+    setLastCountedMistakeKeys(new Set());
     setMessage(`目前填入的數字都正確，還有 ${emptyCount} 格空白。`);
     setMessageTone("success");
-  }, [completed, elapsedSeconds, emptyCount, errorCount]);
+  }, [
+    completed,
+    elapsedSeconds,
+    emptyCount,
+    errorCount,
+    grid,
+    lastCountedMistakeKeys,
+    puzzle.solution,
+    totalMistakes,
+  ]);
 
   useEffect(() => {
     if (completed) {
@@ -250,17 +299,21 @@ export function SudokuGame() {
           >
             <p className="text-lg font-black">完成！恭喜解開這一局。</p>
             <p className="mt-1 text-sm font-semibold">
-              用時 {formatElapsedTime(elapsedSeconds)}，可以換個難度再挑戰。
+              Completed in {formatElapsedTime(elapsedSeconds)}
+            </p>
+            <p className="text-sm font-semibold">
+              Mistakes: {totalMistakes}
             </p>
           </section>
         ) : null}
 
         <section className="grid flex-1 gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className="mx-auto w-full max-w-[640px] lg:max-w-none">
-            <div className="mb-2 grid grid-cols-2 gap-2 rounded-md border border-[#d9d2c3] bg-white px-2 py-2 shadow-sm sm:mb-3 sm:grid-cols-4 sm:px-3 sm:py-3">
+            <div className="mb-2 grid grid-cols-2 gap-2 rounded-md border border-[#d9d2c3] bg-white px-2 py-2 shadow-sm sm:mb-3 sm:grid-cols-5 sm:px-3 sm:py-3">
               <Stat label="題目" value={puzzle.title} />
               <Stat label="難度" value={difficultyLabel(difficulty)} />
               <Stat label="時間" value={formatElapsedTime(elapsedSeconds)} />
+              <Stat label="Mistakes" value={String(totalMistakes)} />
               <Stat label="錯誤" value={showErrors ? String(errorCount) : "-"} />
             </div>
 
