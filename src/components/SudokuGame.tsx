@@ -301,8 +301,8 @@ export function SudokuGame() {
               aria-label="數獨棋盤"
               style={{
                 width: "min(92vw, 520px)",
-                gridTemplateColumns: "repeat(9, minmax(0, 1fr))",
-                gridTemplateRows: "repeat(9, minmax(0, 1fr))",
+                gridTemplateColumns: "repeat(9, 1fr)",
+                gridTemplateRows: "repeat(9, 1fr)",
               }}
             >
               {grid.map((row, rowIndex) =>
