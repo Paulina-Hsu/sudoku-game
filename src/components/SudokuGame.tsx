@@ -296,9 +296,14 @@ export function SudokuGame() {
             </div>
 
             <div
-              className="grid aspect-square w-full touch-manipulation grid-cols-9 overflow-hidden rounded-md border-2 border-[#1f2933] bg-[#1f2933] shadow-lg"
+              className="mx-auto grid aspect-square touch-manipulation overflow-hidden rounded-md border-2 border-[#1f2933] bg-[#1f2933] shadow-lg"
               role="grid"
               aria-label="數獨棋盤"
+              style={{
+                width: "min(92vw, 520px)",
+                gridTemplateColumns: "repeat(9, minmax(0, 1fr))",
+                gridTemplateRows: "repeat(9, minmax(0, 1fr))",
+              }}
             >
               {grid.map((row, rowIndex) =>
                 row.map((value, colIndex) => {
@@ -331,7 +336,7 @@ export function SudokuGame() {
                       } 欄${value ? `，數字 ${value}` : "，空白"}`}
                       onClick={() => selectCell(rowIndex, colIndex)}
                       className={[
-                        "flex aspect-square min-h-9 items-center justify-center border-[#344047] text-xl font-bold outline-none transition sm:text-2xl",
+                        "flex aspect-square h-full w-full items-center justify-center border-[#344047] text-base font-bold leading-none outline-none transition sm:text-xl",
                         "border-r border-b",
                         colIndex === 2 || colIndex === 5
                           ? "border-r-2"
