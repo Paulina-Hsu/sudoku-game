@@ -136,8 +136,16 @@ export function SudokuGame() {
     ],
   );
 
-  const checkAnswer = useCallback(() => {
+  const handleCheckAnswer = useCallback(() => {
     setShowErrors(true);
+
+    const currentErrorCount = countErrors(grid, puzzle.solution);
+    const hasErrors = currentErrorCount > 0;
+
+    console.log("hasErrors", hasErrors);
+    console.log("totalMistakes before", totalMistakes);
+    console.log(`hasErrors ${hasErrors}`);
+    console.log(`totalMistakes before ${totalMistakes}`);
 
     if (completed) {
       setMessage(
@@ -147,12 +155,12 @@ export function SudokuGame() {
       return;
     }
 
-    if (errorCount > 0) {
-      const nextTotalMistakes = totalMistakes + 1;
+    if (hasErrors) {
+      console.log("increment mistakes");
 
-      setTotalMistakes(nextTotalMistakes);
+      setTotalMistakes((previousMistakes) => previousMistakes + 1);
       setMessage(
-        `目前有 ${errorCount} 格和答案不一致。錯誤：${nextTotalMistakes} 次。紅色格請再確認。`,
+        `目前有 ${currentErrorCount} 格和答案不一致。紅色格請再確認。`,
       );
       setMessageTone("error");
       return;
@@ -164,7 +172,8 @@ export function SudokuGame() {
     completed,
     elapsedSeconds,
     emptyCount,
-    errorCount,
+    grid,
+    puzzle.solution,
     totalMistakes,
   ]);
 
@@ -392,7 +401,7 @@ export function SudokuGame() {
                 </button>
                 <button
                   type="button"
-                  onClick={checkAnswer}
+                  onClick={handleCheckAnswer}
                   className="h-12 rounded-md bg-[#3f7d58] px-4 text-base font-bold text-white shadow-sm transition hover:bg-[#336747] focus:outline-none focus:ring-2 focus:ring-[#3f7d58]/30 sm:h-11 sm:text-sm"
                 >
                   檢查答案
